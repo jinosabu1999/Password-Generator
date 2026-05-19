@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextGen Password Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #030305;
+            --surface: rgba(255, 255, 255, 0.04);
+            --surface-hover: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.06);
+            --text-main: #ffffff;
+            --text-muted: #8b8b93;
+            --accent: #a78bfa;
+            --accent-glow: rgba(167, 139, 250, 0.5);
+            --success: #34d399;
+            --danger: #fb7185;
+            --warning: #fbbf24;
+            --info: #38bdf8;
+            
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 10px;
+            
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            overflow-x: hidden;
+        }
+
+        /* Animated Aurora Background */
+        .aurora-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            background: #000;
+        }
+        .aurora-blob {
+            position: absolute;
+            filter: blur(90px);
+            opacity: 0.6;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(167, 139, 250, 0.3); animation-delay: 0s; }
+        .blob-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: rgba(56, 189, 248, 0.2); animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 60%; width: 40vw; height: 40vw; background: rgba(251, 113, 133, 0.2); animation-delay: -10s; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(10%, 15%) scale(1.2); }
+        }
+
+        /* Bento Grid Layout */
+        .bento-container {
+            width: 100%;
+            max-width: 520px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .bento-box {
+            background: var(--surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+        }
+
+        .bento-box:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            background: var(--surface-hover);
+        }
+
+        /* Span Helpers */
+        .col-span-2 { grid-column: span 2; }
+
+        /* Typography */
+        h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Output Area */
+        .output-box {
+            align-items: center;
+            text-align: center;
+            padding: 40px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .password-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--text-main);
+            word-break: break-all;
+            margin-bottom: 24px;
+            min-height: 48px;
+            line-height: 1.2;
+            text-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+
+        /* Advanced Copy Button */
+        .copy-pill {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 12px 24px;
+            border-radius: 100px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .copy-pill:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .copy-pill.copied {
+            background: var(--success);
+            border-color: var(--success);
+            color: #000;
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(52, 211, 153, 0.4);
+        }
+
+        .icon-slider, .text-slider {
+            display: flex;
+            flex-direction: column;
+            height: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slider-track {
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .copy-pill.copied .slider-track {
+            transform: translateY(-20px);
+        }
+
+        .slider-item {
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slider-item svg {
+            width: 18px; height: 18px;
+        }
+
+        /* Length Slider */
+        .length-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+
+        .length-val {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--accent);
+        }
+
+        .slider-container {
+            position: relative;
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin-top: auto;
+        }
+
+        .slider-fill {
+            position: absolute;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px;
+            pointer-events: none;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: transparent;
+            position: absolute;
+            top: 0; left: 0;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Tactile Chips */
+        .chips-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chip:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .chip.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .chip.active svg {
+            stroke: #000;
+        }
+
+        .chip svg {
+            width: 14px; height: 14px;
+            stroke: var(--text-muted);
+            transition: stroke 0.3s;
+        }
+
+        /* Strength & Entropy */
+        .stats-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: auto;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .stat-val {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .strength-bars {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .bar {
+            height: 6px;
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 100px;
+            transition: var(--transition);
+        }
+
+        /* Action Buttons */
+        .btn-generate {
+            background: var(--text-main);
+            color: #000;
+            border: none;
+            padding: 18px;
+            border-radius: var(--radius-md);
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+
+        /* History Vault */
+        .history-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: var(--transition);
+        }
+        .history-btn:hover { background: rgba(255, 255, 255, 0.05); }
+
+        .history-list {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 16px;
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+        }
+
+        .history-list.active {
+            display: flex;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: var(--radius-sm);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .history-item span { color: var(--accent); font-size: 0.75rem; }
+
+        @media (max-width: 600px) {
+            .bento-container {
+                grid-template-columns: 1fr;
+            }
+            .col-span-2 { grid-column: span 1; }
+            .password-display { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="aurora-bg">
+        <div class="aurora-blob blob-1"></div>
+        <div class="aurora-blob blob-2"></div>
+        <div class="aurora-blob blob-3"></div>
+    </div>
+
+    <div class="bento-container">
+        <!-- Output Box -->
+        <div class="bento-box col-span-2 output-box">
+            <h2>Generated Password</h2>
+            <div class="password-display" id="password"></div>
+            
+            <button class="copy-pill" id="copyBtn">
+                <div class="icon-slider">
+                    <div class="slider-track" id="copyIconTrack">
+                        <div class="slider-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </div>
+                        <div class="slider-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-slider">
+                    <div class="slider-track" id="copyTextTrack">
+                        <div class="slider-item">Copy</div>
+                        <div class="slider-item">Copied!</div>
+                    </div>
+                </div>
+            </button>
+        </div>
+
+        <!-- Length Slider -->
+        <div class="bento-box">
+            <div class="length-header">
+                <h2>Length</h2>
+                <span class="length-val" id="lengthValue">16</span>
+            </div>
+            <div class="slider-container">
+                <div class="slider-fill" id="sliderFill"></div>
+                <input type="range" min="8" max="32" value="16" id="lengthSlider">
+            </div>
+        </div>
+
+        <!-- Security Stats -->
+        <div class="bento-box">
+            <h2>Security Profile</h2>
+            <div class="stats-grid">
+                <div class="stat-row">
+                    <span class="stat-label">Crack Time</span>
+                    <span class="stat-val" id="crackTime">Calculating...</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Entropy</span>
+                    <span class="stat-val" id="entropyBits" style="color: var(--accent);">0 bits</span>
+                </div>
+                <div class="strength-bars">
+                    <div class="bar" id="bar-1"></div>
+                    <div class="bar" id="bar-2"></div>
+                    <div class="bar" id="bar-3"></div>
+                    <div class="bar" id="bar-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parameters / Chips -->
+        <div class="bento-box col-span-2">
+            <h2>Characters Included</h2>
+            <div class="chips-grid">
+                <div class="chip active" data-type="upper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+                    Uppercase
+                </div>
+                <div class="chip active" data-type="lower">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>
+                    Lowercase
+                </div>
+                <div class="chip active" data-type="numbers">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg>
+                    Numbers
+                </div>
+                <div class="chip active" data-type="symbols">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Symbols
+                </div>
+                <div class="chip" data-type="excAmbiguous" style="margin-left: auto;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M12 2v20M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/></svg>
+                    No Ambiguous (O,0,l,1)
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions & History -->
+        <div class="bento-box col-span-2" style="flex-direction: row; gap: 16px; padding: 16px; background: transparent; border: none;">
+            <button class="btn-generate" id="generateBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg>
+                Generate Password
+            </button>
+            <button class="history-btn" id="historyToggleBtn" title="Password Vault">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- History List Box -->
+        <div class="bento-box col-span-2 history-list" id="historyBox" style="display: none; margin-top: -16px;">
+            <h2 style="margin-bottom: 4px;">Recent Passwords</h2>
+            <div id="historyItems"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const passwordEl = document.getElementById('password');
+        const copyBtn = document.getElementById('copyBtn');
+        const lengthSlider = document.getElementById('lengthSlider');
+        const lengthValue = document.getElementById('lengthValue');
+        const sliderFill = document.getElementById('sliderFill');
+        const generateBtn = document.getElementById('generateBtn');
+        const crackTimeEl = document.getElementById('crackTime');
+        const entropyBitsEl = document.getElementById('entropyBits');
+        const historyToggleBtn = document.getElementById('historyToggleBtn');
+        const historyBox = document.getElementById('historyBox');
+        const historyItemsContainer = document.getElementById('historyItems');
+        
+        const bars = [
+            document.getElementById('bar-1'),
+            document.getElementById('bar-2'),
+            document.getElementById('bar-3'),
+            document.getElementById('bar-4')
+        ];
+
+        // State & Config
+        let currentPassword = '';
+        let passwordHistory = [];
+        const chips = document.querySelectorAll('.chip');
+        const config = {
+            upper: true,
+            lower: true,
+            numbers: true,
+            symbols: true,
+            excAmbiguous: false
+        };
+
+        const CHAR_SETS = {
+            upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            lower: 'abcdefghijklmnopqrstuvwxyz',
+            numbers: '0123456789',
+            symbols: '!@#$%^&*()_+~`|}{[]:;?><,./-='
+        };
+        const AMBIGUOUS_CHARS = /[ilLI|`oO0]/g;
+
+        // Initialize Chips
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const type = chip.dataset.type;
+                
+                // Prevent turning off all main character sets
+                if (config[type] && type !== 'excAmbiguous') {
+                    const activeMainCount = ['upper', 'lower', 'numbers', 'symbols'].filter(t => config[t]).length;
+                    if (activeMainCount <= 1) return; // Flash red or shake in a real app
+                }
+
+                config[type] = !config[type];
+                chip.classList.toggle('active', config[type]);
+                generateAndAnimate();
+            });
+        });
+
+        // Update Slider Visuals
+        function updateSlider() {
+            const min = lengthSlider.min;
+            const max = lengthSlider.max;
+            const val = lengthSlider.value;
+            const percentage = ((val - min) / (max - min)) * 100;
+            sliderFill.style.width = `${percentage}%`;
+            lengthValue.textContent = val;
+        }
+
+        lengthSlider.addEventListener('input', () => {
+            updateSlider();
+            generatePassword(); // Instant generation on drag (no scramble animation)
+        });
+
+        // Core Generation Logic
+        function generatePassword() {
+            let length = parseInt(lengthSlider.value);
+            let pool = '';
+            let guaranteed = [];
+            let poolSize = 0;
+
+            ['upper', 'lower', 'numbers', 'symbols'].forEach(type => {
+                if (config[type]) {
+                    let chars = CHAR_SETS[type];
+                    if (config.excAmbiguous) chars = chars.replace(AMBIGUOUS_CHARS, '');
+                    pool += chars;
+                    poolSize += chars.length;
+                    guaranteed.push(chars[Math.floor(Math.random() * chars.length)]);
+                }
+            });
+
+            let password = '';
+            const remaining = length - guaranteed.length;
+            for (let i = 0; i < remaining; i++) {
+                password += pool[Math.floor(Math.random() * pool.length)];
+            }
+
+            password = (password + guaranteed.join('')).split('').sort(() => 0.5 - Math.random()).join('');
+            currentPassword = password;
+            passwordEl.textContent = password;
+            
+            calculateSecurity(length, poolSize);
+        }
+
+        // Hacker Scramble Animation Effect
+        function generateAndAnimate() {
+            generatePassword(); // Generate secretly first
+            const finalPassword = currentPassword;
+            const length = finalPassword.length;
+            const chars = '!<>-_\\/[]{}—=+*^?#________';
+            let iterations = 0;
+            const maxIterations = 15;
+
+            const interval = setInterval(() => {
+                passwordEl.textContent = finalPassword.split('').map((letter, index) => {
+                    if (index < iterations / maxIterations * length) return letter;
+                    return chars[Math.floor(Math.random() * chars.length)];
+                }).join('');
+                
+                iterations++;
+                if (iterations >= maxIterations) {
+                    clearInterval(interval);
+                    passwordEl.textContent = finalPassword;
+                    saveToHistory(finalPassword);
+                }
+            }, 30);
+        }
+
+        // Security Mathematics
+        function calculateSecurity(length, poolSize) {
+            // Calculate Entropy (E = L * log2(R))
+            const entropy = Math.floor(length * Math.log2(poolSize || 1));
+            entropyBitsEl.textContent = `${entropy} bits`;
+
+            // Crack time estimation (Rough human-readable mapping)
+            let crackTimeText = "Instant";
+            let crackColor = "var(--danger)";
+            let score = 0;
+
+            if (entropy < 40) { crackTimeText = "Instantly"; score = 1; }
+            else if (entropy < 60) { crackTimeText = "Minutes"; crackColor = "var(--warning)"; score = 2; }
+            else if (entropy < 80) { crackTimeText = "Months"; crackColor = "var(--info)"; score = 3; }
+            else if (entropy < 100) { crackTimeText = "Centuries"; crackColor = "var(--success)"; score = 4; }
+            else { crackTimeText = "Universe Lifespan"; crackColor = "var(--accent)"; score = 4; }
+
+            crackTimeEl.textContent = crackTimeText;
+            crackTimeEl.style.color = crackColor;
+
+            // Update UI Bars
+            const colors = ['var(--danger)', 'var(--warning)', 'var(--success)', 'var(--accent)'];
+            bars.forEach((bar, index) => {
+                bar.style.backgroundColor = index < score ? colors[score - 1] : 'rgba(255, 255, 255, 0.1)';
+            });
+        }
+
+        // Copy Button Animation Logic
+        copyBtn.addEventListener('click', async () => {
+            if (!currentPassword) return;
+            try {
+                await navigator.clipboard.writeText(currentPassword);
+                
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.classList.remove('copied');
+                }, 2500);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+        });
+
+        // History Vault Logic
+        historyToggleBtn.addEventListener('click', () => {
+            const isVisible = historyBox.style.display === 'flex';
+            historyBox.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) renderHistory();
+        });
+
+        function saveToHistory(pw) {
+            if (passwordHistory.includes(pw)) return;
+            passwordHistory.unshift(pw);
+            if (passwordHistory.length > 5) passwordHistory.pop();
+            if (historyBox.style.display === 'flex') renderHistory();
+        }
+
+        function renderHistory() {
+            if (passwordHistory.length === 0) {
+                historyItemsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;">Vault is empty.</div>';
+                return;
+            }
+            historyItemsContainer.innerHTML = passwordHistory.map(pw => `
+                <div class="history-item" onclick="navigator.clipboard.writeText('${pw}'); this.style.background='var(--success)'; this.style.color='#000'; setTimeout(()=> {this.style.background=''; this.style.color='';}, 500)">
+                    ${pw} <span>Copy</span>
+                </div>
+            `).join('');
+        }
+
+        // Init
+        generateBtn.addEventListener('click', generateAndAnimate);
+        updateSlider();
+        generateAndAnimate(); // Initial load animation
+    </script>
+</body>
+</html>
